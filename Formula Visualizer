@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formula Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Open Sans', sans-serif;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+    </style>
+    <link href="https://cdn.tailwindcss.com" rel="stylesheet">
+</head>
+<body>
+    <canvas id="formulaCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('formulaCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        let time = 0;
+        let c = 1;
+        const divisions = 200;
+        let globalRotationSpeed = 0.015;
+        let zoomFactor = 1;
+        let zoomSpeed = 0.004;
+        let zoomDirection = 1;
+
+        const mainText = "The 520 Experience";
+        const addressText = "1236 Price Rd SE, Albany, OR";
+
+        // PNW Color Palette
+        const pnwGreen = 'hsl(140, 60%, 40%)';  // Forest Green
+        const pnwBlue = 'hsl(200, 70%, 30%)'; // Deep Blue
+        const pnwFoggyWhite = 'hsl(0, 0%, 85%)'; // Foggy White
+        const pnwShadow = 'rgba(100, 100, 100, 0.5)';  // Gray Shadow
+
+        // Fire Text Color Palette
+        const fireRedStart = 'hsl(0, 0%, 100%)';
+        const fireRedEnd = 'hsl(0, 0%, 100%)';
+
+        let complexityFactor = 1;
+        let lineLengthFactor = 1;
+        let circleRadiusFactor = 1;
+        let colorSpeed = 0.02;
+        let hyperObjectSides = 4;
+        const hyperObjectTextStrings = [
+            "Green Jelly",
+            "Pendleton Highway",
+            "Nina And The Rebel Rockers",
+            "No Soap Radio",
+            "Kung Fu Vampire",
+            "The Usual Suspects",
+            "String Band"
+        ];
+        let currentTextIndex = 0;
+        let focalLength = 300;  // Focal length for depth of field
+        let depthFactor = 0.002; // Strength of depth of field
+
+
+        function visualizeFormula() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const points = [];
+
+            // Calculate points based on the formula (radial)
+            for (let i = 0; i <= divisions; i++) {
+                const angle = (i / divisions) * Math.PI * 2;
+                const radius = (canvas.width / 3) * (1 + c * Math.sin(angle * 7 * complexityFactor + time * 0.03));
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                points.push({ x: x, y: y, z: radius }); // Store Z for depth
+            }
+
+            // Draw the points as a line
+            ctx.beginPath();
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                const depthFactor = focalLength / (focalLength + p.z);
+                const x = centerX + (p.x - centerX) * depthFactor;
+                const y = centerY + (p.y - centerY) * depthFactor;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            const formulaHue = (time * 10 + 180) % 360;
+            ctx.strokeStyle = pnwGreen; // Use PNW Green
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.shadowColor = pnwShadow;
+            ctx.shadowBlur = 20;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+
+        function drawGlowingText(text, x, y, maxTextWidth, isBottomText = false, isSubText = false, isAddressText = false) {
+            const characters = text.split("");
+            let fontSize = isBottomText ? 40 : 70;
+            fontSize = isAddressText ? 24 : fontSize;
+            ctx.font = `${fontSize}px Open Sans`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            let textWidth = ctx.measureText(text).width;
+            if (textWidth > maxTextWidth) {
+                fontSize = Math.floor((maxTextWidth / textWidth) * fontSize);
+                ctx.font = `${fontSize}px Open Sans`;
+            }
+
+            const getFireColor = (charIndex, textLength) => {
+                //return `hsl(0, 0%, 100%)`; // Original Fire Color
+                return pnwFoggyWhite; // Use PNW Foggy White
+            };
+
+            for (let i = 0; i < characters.length; i++) {
+                const char = characters[i];
+                const charWidth = ctx.measureText(char).width;
+                const charX = x - textWidth / 2 + ctx.measureText(text.substring(0, i)).width + charWidth / 2;
+                ctx.fillStyle = getFireColor(i, characters.length);
+                ctx.shadowColor = pnwShadow; // Use PNW Shadow
+                ctx.shadowBlur = 15;
+                ctx.fillText(char, charX, y);
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        function drawBackground() {
+            const baseAlpha = 0.02;
+            const alphaVariation = 0.08 * Math.sin(time * 0.05);
+            const backgroundHue = (time * 5) % 360;
+            ctx.fillStyle = `hsla(${backgroundHue}, 80%, 10%, ${baseAlpha + alphaVariation})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const gradient = ctx.createRadialGradient(
+                centerX, centerY, 0,
+                centerX, centerY, Math.max(canvas.width, canvas.height) * 0.7
+            );
+            gradient.addColorStop(0, 'hsla(220, 90%, 5%, 0)');
+            gradient.addColorStop(1, 'hsla(220, 90%, 15%, 0.35)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawConnectingLines() {
+            const numLines = 25 * complexityFactor;
+            for (let i = 0; i < numLines; i++) {
+                const startX = centerX + Math.cos(time * 0.04 * i) * canvas.width * 0.5 * lineLengthFactor;
+                const startY = centerY + Math.sin(time * 0.05 * i) * canvas.height * 0.4 * lineLengthFactor;
+                const endX = centerX + Math.cos(time * 0.04 * i + Math.PI) * canvas.width * 0.5 * lineLengthFactor;
+                const endY = centerY + Math.sin(time * 0.05 * i) * canvas.height * 0.4 * lineLengthFactor;
+
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                const lineOpacity = 0.4 + 0.4 * Math.sin(time * 0.06 * i);
+                const hue = (time * 30 + i * 40) % 360;
+                ctx.strokeStyle = pnwBlue; // Use PNW Blue
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.shadowColor = pnwShadow; // Use PNW Shadow
+                ctx.shadowBlur = 12;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function drawCardioid() {
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            const baseRadius = 50 * zoomFactor;
+            let circleRadius = 25 * zoomFactor * circleRadiusFactor;
+            const numPoints = 200 * complexityFactor;
+            ctx.beginPath();
+            for (let i = 0; i < numPoints; i++) {
+                const theta = (i / numPoints) * Math.PI * 2;
+                // Exponentially refine the circle radius, but keep it contained
+                circleRadius = Math.min(100, 25 * zoomFactor * Math.pow(1.1, time * 5));
+                const x = baseRadius * (2 * Math.cos(theta) - Math.cos(2 * theta)) + circleRadius * Math.sin(time * 0.05 * i);
+                const y = baseRadius * (2 * Math.sin(theta) - Math.sin(2 * theta)) + circleRadius * Math.cos(time * 0.05 * i);
+                const depthFactor = focalLength / (focalLength + circleRadius);
+                const xProjected = x * depthFactor;
+                const yProjected = y * depthFactor;
+
+                if (i === 0) {
+                    ctx.moveTo(xProjected, yProjected);
+                } else {
+                    ctx.lineTo(xProjected, yProjected);
+                }
+            }
+            const cardioidHue = (time * 40) % 360;
+            ctx.strokeStyle = pnwGreen; // Use PNW Green
+            ctx.lineWidth = 2;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.shadowColor = pnwShadow; // Use PNW Shadow
+            ctx.shadowBlur = 15;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+
+        function drawRecursiveHyperobject(x, y, size, level, initialRotation) {
+            if (level === 0) return;
+
+            const rotation = initialRotation + time * 0.02 * level;
+            const sides = hyperObjectSides;
+            const angleStep = Math.PI * 2 / sides;
+
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(rotation);
+
+            ctx.beginPath();
+            for (let i = 0; i < sides; i++) {
+                const angle = i * angleStep;
+                const pointX = size * Math.cos(angle);
+                const pointY = size * Math.sin(angle);
+                if (i === 0) {
+                    ctx.moveTo(pointX, pointY);
+                } else {
+                    ctx.lineTo(pointX, pointY);
+                }
+            }
+            ctx.closePath();
+
+            const hyperObjHue = (time * 50 + level * 20) % 360;
+            ctx.fillStyle = pnwBlue; // Use PNW Blue
+            ctx.strokeStyle = pnwFoggyWhite;
+            ctx.lineWidth = 2;
+            const depthFactor = focalLength / (focalLength + size);
+            const xProjected = x  * depthFactor;
+            const yProjected = y * depthFactor;
+            ctx.shadowColor = pnwShadow; // Use PNW Shadow
+            ctx.shadowBlur = 10 * depthFactor;
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+             // Add text inside the hyperobject
+            ctx.fillStyle = '#000'; // Black text
+            const maxTextWidth = size * 1.5;
+            const maxTextHeight = size * 1.5;
+            let fontSize = 16;
+            ctx.font = `${fontSize}px Open Sans`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            let textWidth = ctx.measureText(hyperObjectTextStrings[currentTextIndex]).width;
+             while (textWidth > maxTextWidth && fontSize > 10) {
+                fontSize -= 1;
+                ctx.font = `${fontSize}px Open Sans`;
+                textWidth = ctx.measureText(hyperObjectTextStrings[currentTextIndex]).width;
+            }
+            ctx.fillText(hyperObjectTextStrings[currentTextIndex], 0, 0);
+
+            ctx.restore();
+
+            const nextSize = size * 0.5;
+            const nextLevel = level - 1;
+            if (nextSize > 10) {
+                drawRecursiveHyperobject(xProjected, yProjected, nextSize, nextLevel, rotation);
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            visualizeFormula();
+            drawConnectingLines();
+            drawCardioid();
+            drawRecursiveHyperobject(centerX, centerY, 100 * zoomFactor, 3, time * 0.05);
+
+            c = Math.pow(1.08, time);
+            time += 0.03;
+            globalRotationSpeed += 0.005;
+            zoomFactor += zoomSpeed;
+            if (zoomFactor > 1.4 || zoomFactor < 0.6) {
+                zoomDirection *= -1;
+                zoomSpeed *= -1;
+            }
+
+            complexityFactor += 0.02;
+            lineLengthFactor = 1 + 0.5 * Math.sin(time * 0.02);
+            circleRadiusFactor = 1 + 0.3 * Math.cos(time * 0.04);
+            colorSpeed += 0.01;
+            hyperObjectSides = 4 + Math.floor(time * 0.2) % 8;
+            currentTextIndex = Math.floor(time / 2) % hyperObjectTextStrings.length;
+
+
+            const mainTextWidth = canvas.width * 0.8;
+            const addressTextWidth = canvas.width * 0.8;
+            const mainTextY = canvas.height * 0.15;
+            const addressTextY = canvas.height * 0.85;
+            drawGlowingText(mainText, centerX, mainTextY, mainTextWidth, false, false);
+            drawGlowingText(addressText, centerX, addressTextY, addressTextWidth, true, false, true);
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
